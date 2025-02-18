@@ -284,7 +284,9 @@ impl DuelManagerContract {
                     duel.id.0, player_a
                 ));
 
-                let promise = self.transfer(player_a.clone(), U128(reward - fee)).and(self.burn(U128(fee)));
+                let promise = self
+                    .transfer(player_a.clone(), U128(reward - fee))
+                    .and(self.burn(U128(fee)));
                 return PromiseOrValue::Promise(promise);
             } else if damage_a < damage_b {
                 let player_b = duel.player_b.clone().unwrap();
@@ -296,7 +298,9 @@ impl DuelManagerContract {
                     duel.id.0, player_b
                 ));
 
-                let promise = self.transfer(player_b.clone(), U128(reward - fee)).and(self.burn(U128(fee)));
+                let promise = self
+                    .transfer(player_b.clone(), U128(reward - fee))
+                    .and(self.burn(U128(fee)));
                 return PromiseOrValue::Promise(promise);
             } else {
                 let player_a = duel.player_a.clone();
@@ -305,7 +309,9 @@ impl DuelManagerContract {
                 duel.winner = Some(Winner::Draw);
                 env::log_str(&format!("Duel {} finished! Result: draw!", duel.id.0));
 
-                let promise = self.transfer(player_a, stake).and(self.transfer(player_b, stake));
+                let promise = self
+                    .transfer(player_a, stake)
+                    .and(self.transfer(player_b, stake));
                 return PromiseOrValue::Promise(promise);
             }
         }
@@ -364,7 +370,9 @@ impl DuelManagerContract {
         let player_a = duel.player_a.clone();
         let player_b = duel.player_b.clone().unwrap();
         let stake = duel.stake;
-        let promise = self.transfer(player_a, stake).and(self.transfer(player_b, stake));
+        let promise = self
+            .transfer(player_a, stake)
+            .and(self.transfer(player_b, stake));
 
         self.duels.remove(&duel_id.0);
         env::log_str(&format!("Duel {} canceled due to inactivity.", duel_id.0));
@@ -430,7 +438,10 @@ impl DuelManagerContract {
     }
 
     #[private]
-    pub fn on_burn_excess(&mut self, #[callback_result] balance: Result<U128, PromiseError>) -> Option<Promise> {
+    pub fn on_burn_excess(
+        &mut self,
+        #[callback_result] balance: Result<U128, PromiseError>,
+    ) -> Option<Promise> {
         if let Ok(balance) = balance {
             if balance.0 > self.total_stake {
                 return Some(self.burn(U128(balance.0 - self.total_stake)));

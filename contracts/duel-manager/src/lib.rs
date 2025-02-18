@@ -3,7 +3,7 @@ use near_sdk::json_types::U128;
 use near_sdk::store::{IterableMap, LookupMap};
 use near_sdk::{
     env, ext_contract, near, near_bindgen, serde_json, AccountId, NearToken, PanicOnDefault,
-    PromiseError, PromiseOrValue,
+    Promise, PromiseError, PromiseOrValue,
 };
 use std::cmp;
 use std::collections::HashMap;
@@ -213,7 +213,7 @@ impl DuelManagerContract {
         env::log_str(&format!("Duel {} accepted by {}.", duel_id.0, sender));
     }
 
-    pub fn take_turn(&mut self, duel_id: U128, style: RoastStyle) {
+    pub fn take_turn(&mut self, duel_id: U128, style: RoastStyle) -> PromiseOrValue<u8> {
         let sender = env::predecessor_account_id();
         let mut duel = self.duels.get(&duel_id.0).expect("Duel not found.").clone();
 
@@ -274,46 +274,48 @@ impl DuelManagerContract {
         if duel.turns.len() == MAX_TURNS {
             let damage_a: u8 = duel.turns.iter().step_by(2).map(|t| t.damage).sum();
             let damage_b: u8 = duel.turns.iter().skip(1).step_by(2).map(|t| t.damage).sum();
-            duel.winner = if damage_a > damage_b {
+            if damage_a > damage_b {
                 let player_a = duel.player_a.clone();
                 let reward = duel.stake.0 * 2;
                 let fee = reward / 10;
-                self.transfer(player_a.clone(), U128(reward - fee));
-                self.burn(U128(fee));
+                duel.winner = Some(Winner::PlayerA);
                 env::log_str(&format!(
                     "Duel {} finished! Result: {} won!",
                     duel.id.0, player_a
                 ));
 
-                Some(Winner::PlayerA)
+                let promise = self.transfer(player_a.clone(), U128(reward - fee)).and(self.burn(U128(fee)));
+                return PromiseOrValue::Promise(promise);
             } else if damage_a < damage_b {
                 let player_b = duel.player_b.clone().unwrap();
                 let reward = duel.stake.0 * 2;
                 let fee = reward / 10;
-                self.transfer(player_b.clone(), U128(reward - fee));
-                self.burn(U128(fee));
+                duel.winner = Some(Winner::PlayerB);
                 env::log_str(&format!(
                     "Duel {} finished! Result: {} won!",
                     duel.id.0, player_b
                 ));
 
-                Some(Winner::PlayerB)
+                let promise = self.transfer(player_b.clone(), U128(reward - fee)).and(self.burn(U128(fee)));
+                return PromiseOrValue::Promise(promise);
             } else {
                 let player_a = duel.player_a.clone();
                 let player_b = duel.player_b.clone().unwrap();
                 let stake = duel.stake;
-                self.transfer(player_a, stake);
-                self.transfer(player_b, stake);
+                duel.winner = Some(Winner::Draw);
                 env::log_str(&format!("Duel {} finished! Result: draw!", duel.id.0));
 
-                Some(Winner::Draw)
-            };
+                let promise = self.transfer(player_a, stake).and(self.transfer(player_b, stake));
+                return PromiseOrValue::Promise(promise);
+            }
         }
 
         self.duels.insert(duel_id.0, duel);
+
+        PromiseOrValue::Value(damage)
     }
 
-    pub fn cancel_duel(&mut self, duel_id: U128) {
+    pub fn cancel_duel(&mut self, duel_id: U128) -> Promise {
         let sender = env::predecessor_account_id();
         let current_time = env::block_timestamp();
         let duel = self.duels.get(&duel_id.0).expect("Duel not found");
@@ -326,14 +328,14 @@ impl DuelManagerContract {
             );
 
             let player_a = duel.player_a.clone();
-            self.transfer(player_a.clone(), duel.stake);
+            let promise = self.transfer(player_a.clone(), duel.stake);
             self.duels.remove(&duel_id.0);
 
             env::log_str(&format!(
                 "Duel {} canceled. Stake refunded to {}.",
                 duel_id.0, player_a
             ));
-            return;
+            return promise;
         }
 
         let is_player_a_turn = duel.turns.len() % 2 == 0;
@@ -362,11 +364,12 @@ impl DuelManagerContract {
         let player_a = duel.player_a.clone();
         let player_b = duel.player_b.clone().unwrap();
         let stake = duel.stake;
-        self.transfer(player_a, stake);
-        self.transfer(player_b, stake);
+        let promise = self.transfer(player_a, stake).and(self.transfer(player_b, stake));
 
         self.duels.remove(&duel_id.0);
         env::log_str(&format!("Duel {} canceled due to inactivity.", duel_id.0));
+
+        promise
     }
 
     pub fn set_roast(&mut self, duel_id: U128, turn: usize, roast_tx_id: String) {
@@ -411,38 +414,39 @@ impl DuelManagerContract {
         PromiseOrValue::Value(U128(0))
     }
 
-    pub fn withdraw(&mut self, amount: U128) {
+    pub fn withdraw(&mut self, amount: U128) -> Promise {
         let sender = env::predecessor_account_id();
         let balance = self.stakes.entry(sender.clone()).or_insert(0);
         assert!(*balance >= amount.0, "Insufficient balance");
 
         *balance -= amount.0;
-        self.transfer(sender, amount);
+        self.transfer(sender, amount)
     }
 
-    pub fn burn_excess(&mut self) {
+    pub fn burn_excess(&mut self) -> Promise {
         ext_ft_contract::ext(self.ft_contract.clone())
             .ft_balance_of(env::current_account_id())
-            .then(Self::ext(env::current_account_id()).on_burn_excess());
+            .then(Self::ext(env::current_account_id()).on_burn_excess())
     }
 
     #[private]
-    pub fn on_burn_excess(&mut self, #[callback_result] balance: Result<U128, PromiseError>) {
+    pub fn on_burn_excess(&mut self, #[callback_result] balance: Result<U128, PromiseError>) -> Option<Promise> {
         if let Ok(balance) = balance {
             if balance.0 > self.total_stake {
-                self.burn(U128(balance.0 - self.total_stake));
+                return Some(self.burn(U128(balance.0 - self.total_stake)));
             }
         }
+        None
     }
 
-    fn transfer(&mut self, sender: AccountId, amount: U128) {
+    fn transfer(&mut self, sender: AccountId, amount: U128) -> Promise {
         self.total_stake -= amount.0;
         ext_ft_contract::ext(self.ft_contract.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .ft_transfer(sender, amount, None);
+            .ft_transfer(sender, amount, None)
     }
 
-    fn burn(&mut self, amount: U128) {
-        ext_ft_contract::ext(self.ft_contract.clone()).ft_burn(amount);
+    fn burn(&mut self, amount: U128) -> Promise {
+        ext_ft_contract::ext(self.ft_contract.clone()).ft_burn(amount)
     }
 }

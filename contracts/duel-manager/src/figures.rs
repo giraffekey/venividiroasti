@@ -1,7 +1,8 @@
 use near_sdk::near;
+use strum_macros::EnumIter;
 
 #[near(serializers = [json, borsh])]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
 pub enum HistoricalFigure {
     JuliusCaesar,
     WilliamShakespeare,

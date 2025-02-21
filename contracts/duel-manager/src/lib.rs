@@ -7,6 +7,7 @@ use near_sdk::{
 };
 use std::cmp;
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 
 mod figures;
 mod storage;
@@ -17,6 +18,30 @@ use storage::*;
 const MIN_STAKE: u128 = 10u128.pow(24);
 const MAX_TURNS: usize = 10;
 
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct FigureData {
+    pub name: HistoricalFigure,
+    pub wit: u8,
+    pub brutality: u8,
+    pub strategy: u8,
+    pub mockery: u8,
+}
+
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct LeaderboardItem {
+    pub account_id: AccountId,
+    pub value: u32,
+}
+
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct RoastIndex {
+    pub duel_id: U128,
+    pub turn: usize,
+}
+
 #[ext_contract(ext_ft_contract)]
 trait FtContract {
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>);
@@ -25,7 +50,7 @@ trait FtContract {
 }
 
 #[near(serializers = [json, borsh])]
-#[serde(tag = "function")]
+#[serde(tag = "function", rename_all = "snake_case")]
 pub enum Msg {
     CreateDuel {
         figure: HistoricalFigure,
@@ -61,6 +86,21 @@ impl DuelManagerContract {
         }
     }
 
+    pub fn get_figures() -> Vec<FigureData> {
+        HistoricalFigure::iter()
+            .map(|figure| {
+                let stats = figure.stats();
+                FigureData {
+                    name: figure,
+                    wit: stats.wit,
+                    brutality: stats.brutality,
+                    strategy: stats.strategy,
+                    mockery: stats.mockery,
+                }
+            })
+            .collect()
+    }
+
     pub fn get_duel(&self, duel_id: U128) -> Option<Duel> {
         self.duels.get(&duel_id.0).cloned()
     }
@@ -69,18 +109,7 @@ impl DuelManagerContract {
         self.duels
             .values()
             .filter(|d| d.winner.is_some())
-            .sorted_by(|a, b| a.id.cmp(&b.id).reverse())
-            .skip(offset)
-            .take(count)
-            .cloned()
-            .collect()
-    }
-
-    pub fn get_pending_duels(&self, count: usize, offset: usize) -> Vec<Duel> {
-        self.duels
-            .values()
-            .filter(|d| d.player_b.is_none() && d.winner.is_none())
-            .sorted_by(|a, b| a.id.cmp(&b.id).reverse())
+            .sorted_by(|a, b| a.creation_time.cmp(&b.creation_time).reverse())
             .skip(offset)
             .take(count)
             .cloned()
@@ -91,7 +120,18 @@ impl DuelManagerContract {
         self.duels
             .values()
             .filter(|d| d.player_b.is_some() && d.winner.is_none())
-            .sorted_by(|a, b| a.id.cmp(&b.id).reverse())
+            .sorted_by(|a, b| a.creation_time.cmp(&b.creation_time).reverse())
+            .skip(offset)
+            .take(count)
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_pending_duels(&self, count: usize, offset: usize) -> Vec<Duel> {
+        self.duels
+            .values()
+            .filter(|d| d.player_b.is_none() && d.winner.is_none())
+            .sorted_by(|a, b| a.creation_time.cmp(&b.creation_time).reverse())
             .skip(offset)
             .take(count)
             .cloned()
@@ -102,12 +142,12 @@ impl DuelManagerContract {
         self.duels
             .values()
             .filter(|d| d.player_a == account_id || d.player_b.as_ref() == Some(&account_id))
-            .sorted_by(|a, b| a.id.cmp(&b.id).reverse())
+            .sorted_by(|a, b| a.creation_time.cmp(&b.creation_time).reverse())
             .cloned()
             .collect()
     }
 
-    pub fn get_leaderboard_by_wins(&self, count: usize, offset: usize) -> Vec<(AccountId, u32)> {
+    pub fn get_leaderboard_by_wins(&self, count: usize, offset: usize) -> Vec<LeaderboardItem> {
         let mut win_board: HashMap<AccountId, u32> = HashMap::new();
 
         for duel in self.duels.values() {
@@ -125,10 +165,11 @@ impl DuelManagerContract {
             .sorted_by(|a, b| a.1.cmp(&b.1).reverse())
             .skip(offset)
             .take(count)
+            .map(|(account_id, value)| LeaderboardItem { account_id, value })
             .collect()
     }
 
-    pub fn get_leaderboard_by_damage(&self, count: usize, offset: usize) -> Vec<(AccountId, u32)> {
+    pub fn get_leaderboard_by_damage(&self, count: usize, offset: usize) -> Vec<LeaderboardItem> {
         let mut damage_board: HashMap<AccountId, u32> = HashMap::new();
 
         for duel in self.duels.values() {
@@ -152,6 +193,24 @@ impl DuelManagerContract {
             .sorted_by(|a, b| a.1.cmp(&b.1).reverse())
             .skip(offset)
             .take(count)
+            .map(|(account_id, value)| LeaderboardItem { account_id, value })
+            .collect()
+    }
+
+    pub fn get_roast_queue(&self) -> Vec<RoastIndex> {
+        self.duels
+            .values()
+            .map(|duel| {
+                duel.turns
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, turn)| turn.roast.is_none())
+                    .map(|(i, _)| RoastIndex {
+                        duel_id: duel.id,
+                        turn: i,
+                    })
+            })
+            .flatten()
             .collect()
     }
 
@@ -159,58 +218,14 @@ impl DuelManagerContract {
         U128(self.stakes.get(&account_id).copied().unwrap_or(0))
     }
 
-    #[payable]
     pub fn create_duel(&mut self, figure: HistoricalFigure, stake: U128) -> U128 {
         let sender = env::predecessor_account_id();
-        let balance = self.stakes.entry(sender.clone()).or_insert(0);
-
-        assert!(stake >= U128(MIN_STAKE), "Minimum stake required.");
-        assert!(*balance >= stake.0, "Insufficient balance");
-
-        *balance -= stake.0;
-
-        let duel_id = self.next_duel_id;
-        let duel = Duel {
-            id: U128(duel_id),
-            creation_time: env::block_timestamp(),
-            start_time: None,
-            stake,
-            player_a: sender.clone(),
-            figure_a: figure,
-            player_b: None,
-            figure_b: None,
-            turns: Vec::new(),
-            winner: None,
-        };
-
-        self.duels.insert(duel_id, duel);
-        self.next_duel_id += 1;
-
-        env::log_str(&format!("Duel {} created by {}.", duel_id, sender));
-        U128(duel_id)
+        self._create_duel(sender, figure, stake)
     }
 
-    #[payable]
     pub fn accept_duel(&mut self, duel_id: U128, figure: HistoricalFigure) {
         let sender = env::predecessor_account_id();
-        let duel = self.duels.get_mut(&duel_id.0).expect("Duel not found.");
-        let balance = self.stakes.entry(sender.clone()).or_insert(0);
-
-        assert!(duel.player_b.is_none(), "Duel already accepted.");
-        assert!(sender != duel.player_a, "Account is already participating.");
-        assert!(
-            figure != duel.figure_a,
-            "Historical figure already selected."
-        );
-        assert!(*balance >= duel.stake.0, "Insufficient balance");
-
-        *balance -= duel.stake.0;
-
-        duel.start_time = Some(env::block_timestamp());
-        duel.player_b = Some(sender.clone());
-        duel.figure_b = Some(figure);
-
-        env::log_str(&format!("Duel {} accepted by {}.", duel_id.0, sender));
+        self._accept_duel(sender, duel_id, figure);
     }
 
     pub fn take_turn(&mut self, duel_id: U128, style: RoastStyle) -> PromiseOrValue<u8> {
@@ -404,17 +419,17 @@ impl DuelManagerContract {
             "The token is not supported"
         );
 
-        let balance = self.stakes.entry(sender_id).or_insert(0);
+        let balance = self.stakes.entry(sender_id.clone()).or_insert(0);
         *balance += amount.0;
         self.total_stake += amount.0;
 
         let msg = serde_json::from_str::<Msg>(&msg);
         match msg {
             Ok(Msg::CreateDuel { figure }) => {
-                self.create_duel(figure, amount);
+                self._create_duel(sender_id, figure, amount);
             }
             Ok(Msg::AcceptDuel { duel_id, figure }) => {
-                self.accept_duel(duel_id, figure);
+                self._accept_duel(sender_id, duel_id, figure);
             }
             _ => (),
         }
@@ -448,6 +463,56 @@ impl DuelManagerContract {
             }
         }
         None
+    }
+
+    fn _create_duel(&mut self, sender: AccountId, figure: HistoricalFigure, stake: U128) -> U128 {
+        let balance = self.stakes.entry(sender.clone()).or_insert(0);
+
+        assert!(stake >= U128(MIN_STAKE), "Minimum stake required.");
+        assert!(*balance >= stake.0, "Insufficient balance");
+
+        *balance -= stake.0;
+
+        let duel_id = self.next_duel_id;
+        let duel = Duel {
+            id: U128(duel_id),
+            creation_time: env::block_timestamp(),
+            start_time: None,
+            stake,
+            player_a: sender.clone(),
+            figure_a: figure,
+            player_b: None,
+            figure_b: None,
+            turns: Vec::new(),
+            winner: None,
+        };
+
+        self.duels.insert(duel_id, duel);
+        self.next_duel_id += 1;
+
+        env::log_str(&format!("Duel {} created by {}.", duel_id, sender));
+        U128(duel_id)
+    }
+
+    fn _accept_duel(&mut self, sender: AccountId, duel_id: U128, figure: HistoricalFigure) {
+        let duel = self.duels.get_mut(&duel_id.0).expect("Duel not found.");
+        let balance = self.stakes.entry(sender.clone()).or_insert(0);
+
+        assert!(duel.player_b.is_none(), "Duel already accepted.");
+        assert!(sender != duel.player_a, "Account is already participating.");
+        assert!(
+            figure != duel.figure_a,
+            "Historical figure already selected."
+        );
+        assert!(*balance >= duel.stake.0, "Insufficient balance");
+
+        *balance -= duel.stake.0;
+
+        duel.start_time = Some(env::block_timestamp());
+        duel.player_b = Some(sender.clone());
+        duel.figure_b = Some(figure);
+
+        env::log_str(&format!("Duel {} accepted by {}.", duel_id.0, sender));
     }
 
     fn transfer(&mut self, sender: AccountId, amount: U128) -> Promise {

@@ -91,7 +91,13 @@ impl TokenContract {
         this
     }
 
+    #[payable]
     pub fn ft_burn(&mut self, amount: U128) {
+        assert!(
+            env::attached_deposit() == NearToken::from_yoctonear(1),
+            "This function requires exactly 1 yoctoNEAR to be attached for security reasons."
+        );
+
         let sender = env::predecessor_account_id();
         let balance = self.token.ft_balance_of(sender.clone());
         assert!(balance.0 >= amount.0, "Insufficient balance");
@@ -102,8 +108,18 @@ impl TokenContract {
             self.token.accounts.insert(&sender, &(balance.0 - amount.0));
         }
 
-        assert!(self.token.total_supply >= amount.0, "Insufficient total supply");
+        assert!(
+            self.token.total_supply >= amount.0,
+            "Insufficient total supply"
+        );
         self.token.total_supply -= amount.0;
+
+        near_contract_standards::fungible_token::events::FtBurn {
+            owner_id: &sender,
+            amount,
+            memo: Some("tokens were burned"),
+        }
+        .emit();
     }
 }
 

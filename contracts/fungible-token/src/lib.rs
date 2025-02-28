@@ -95,7 +95,7 @@ impl TokenContract {
     pub fn ft_burn(&mut self, amount: U128) {
         assert!(
             env::attached_deposit() == NearToken::from_yoctonear(1),
-            "This function requires exactly 1 yoctoNEAR to be attached for security reasons."
+            "This function requires exactly 1 yoctoNEAR to be attached for security purposes."
         );
 
         let sender = env::predecessor_account_id();

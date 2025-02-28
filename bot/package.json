@@ -1,0 +1,25 @@
+{
+  "name": "bot",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "dependencies": {
+    "@helia/unixfs": "^4.0.2",
+    "@web3-storage/w3up-client": "^17.1.2",
+    "dotenv": "^16.4.7",
+    "files-from-path": "^1.1.1",
+    "helia": "^5.2.1",
+    "multiformats": "^13.3.2",
+    "near-api-js": "^5.0.1",
+    "openai": "^4.85.4",
+    "twitter-api-v2": "^1.20.1"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

@@ -40,6 +40,10 @@ pub struct LeaderboardItem {
 pub struct RoastIndex {
     pub duel_id: U128,
     pub turn: usize,
+    pub current_figure: HistoricalFigure,
+    pub next_figure: HistoricalFigure,
+    pub damage: u8,
+    pub style: RoastStyle,
 }
 
 #[ext_contract(ext_ft_contract)]
@@ -197,6 +201,25 @@ impl DuelManagerContract {
             .collect()
     }
 
+    pub fn get_top_duel(&self) -> Option<Duel> {
+        let now = env::block_timestamp();
+        let one_day = 24 * 60 * 60 * 1_000_000_000;
+
+        self.duels
+            .values()
+            .filter(|d| {
+                let has_winning_player = match d.winner {
+                    Some(Winner::PlayerA) | Some(Winner::PlayerB) => true,
+                    _ => false,
+                };
+                has_winning_player
+                    && d.turns.len() == 10
+                    && now.saturating_sub(d.turns.last().unwrap().creation_time) <= one_day
+            })
+            .max_by(|a, b| a.stake.0.cmp(&b.stake.0))
+            .cloned()
+    }
+
     pub fn get_roast_queue(&self) -> Vec<RoastIndex> {
         self.duels
             .values()
@@ -204,10 +227,22 @@ impl DuelManagerContract {
                 duel.turns
                     .iter()
                     .enumerate()
-                    .filter(|(_, turn)| turn.roast.is_none())
-                    .map(|(i, _)| RoastIndex {
+                    .filter(|(_, turn)| turn.roast_cid.is_none())
+                    .map(|(i, turn)| RoastIndex {
                         duel_id: duel.id,
                         turn: i,
+                        current_figure: if duel.turns.len() % 2 == 0 {
+                            duel.figure_a.clone()
+                        } else {
+                            duel.figure_b.unwrap()
+                        },
+                        next_figure: if duel.turns.len() % 2 == 0 {
+                            duel.figure_b.unwrap()
+                        } else {
+                            duel.figure_a.clone()
+                        },
+                        damage: turn.damage,
+                        style: turn.style,
                     })
             })
             .flatten()
@@ -218,17 +253,35 @@ impl DuelManagerContract {
         U128(self.stakes.get(&account_id).copied().unwrap_or(0))
     }
 
+    #[payable]
     pub fn create_duel(&mut self, figure: HistoricalFigure, stake: U128) -> U128 {
+        assert!(
+            env::attached_deposit() == NearToken::from_yoctonear(1),
+            "This function requires exactly 1 yoctoNEAR to be attached for security purposes."
+        );
+
         let sender = env::predecessor_account_id();
         self._create_duel(sender, figure, stake)
     }
 
+    #[payable]
     pub fn accept_duel(&mut self, duel_id: U128, figure: HistoricalFigure) {
+        assert!(
+            env::attached_deposit() == NearToken::from_yoctonear(1),
+            "This function requires exactly 1 yoctoNEAR to be attached for security purposes."
+        );
+
         let sender = env::predecessor_account_id();
         self._accept_duel(sender, duel_id, figure);
     }
 
+    #[payable]
     pub fn take_turn(&mut self, duel_id: U128, style: RoastStyle) -> PromiseOrValue<u8> {
+        assert!(
+            env::attached_deposit() == NearToken::from_yoctonear(1),
+            "This function requires exactly 1 yoctoNEAR to be attached for security purposes."
+        );
+
         let sender = env::predecessor_account_id();
         let mut duel = self.duels.get(&duel_id.0).expect("Duel not found.").clone();
 
@@ -282,7 +335,7 @@ impl DuelManagerContract {
             creation_time: env::block_timestamp(),
             damage,
             style,
-            roast: None,
+            roast_cid: None,
         });
 
         // If max turns reached, determine winner
@@ -299,9 +352,9 @@ impl DuelManagerContract {
                     duel.id.0, player_a
                 ));
 
+                self.burn(U128(fee));
                 let promise = self
-                    .transfer(player_a.clone(), U128(reward - fee))
-                    .and(self.burn(U128(fee)));
+                    .transfer(player_a.clone(), U128(reward - fee));
                 return PromiseOrValue::Promise(promise);
             } else if damage_a < damage_b {
                 let player_b = duel.player_b.clone().unwrap();
@@ -313,9 +366,9 @@ impl DuelManagerContract {
                     duel.id.0, player_b
                 ));
 
+                self.burn(U128(fee));
                 let promise = self
-                    .transfer(player_b.clone(), U128(reward - fee))
-                    .and(self.burn(U128(fee)));
+                    .transfer(player_b.clone(), U128(reward - fee));
                 return PromiseOrValue::Promise(promise);
             } else {
                 let player_a = duel.player_a.clone();
@@ -323,10 +376,10 @@ impl DuelManagerContract {
                 let stake = duel.stake;
                 duel.winner = Some(Winner::Draw);
                 env::log_str(&format!("Duel {} finished! Result: draw!", duel.id.0));
-
-                let promise = self
-                    .transfer(player_a, stake)
-                    .and(self.transfer(player_b, stake));
+                
+                self
+                    .transfer(player_a, stake);
+                let promise = self.transfer(player_b, stake);
                 return PromiseOrValue::Promise(promise);
             }
         }
@@ -336,7 +389,13 @@ impl DuelManagerContract {
         PromiseOrValue::Value(damage)
     }
 
+    #[payable]
     pub fn cancel_duel(&mut self, duel_id: U128) -> Promise {
+        assert!(
+            env::attached_deposit() == NearToken::from_yoctonear(1),
+            "This function requires exactly 1 yoctoNEAR to be attached for security purposes."
+        );
+
         let sender = env::predecessor_account_id();
         let current_time = env::block_timestamp();
         let duel = self.duels.get(&duel_id.0).expect("Duel not found");
@@ -385,9 +444,15 @@ impl DuelManagerContract {
         let player_a = duel.player_a.clone();
         let player_b = duel.player_b.clone().unwrap();
         let stake = duel.stake;
-        let promise = self
-            .transfer(player_a, stake)
-            .and(self.transfer(player_b, stake));
+        let promise = if is_player_a_turn {
+            self.transfer(player_a, stake);
+            self
+                .transfer(player_b, stake)
+        } else {
+            self.transfer(player_b, stake);
+            self
+                .transfer(player_a, stake)
+        };
 
         self.duels.remove(&duel_id.0);
         env::log_str(&format!("Duel {} canceled due to inactivity.", duel_id.0));
@@ -395,15 +460,15 @@ impl DuelManagerContract {
         promise
     }
 
-    pub fn set_roast(&mut self, duel_id: U128, turn: usize, roast_tx_id: String) {
+    pub fn set_roast(&mut self, duel_id: U128, turn: usize, roast_cid: String) {
         let sender = env::predecessor_account_id();
         assert!(sender == self.admin_id, "Sender must be admin.");
 
         let duel = self.duels.get_mut(&duel_id.0).expect("Duel not found.");
         assert!(turn < duel.turns.len(), "Turn has not been taken.");
-        assert!(duel.turns[turn].roast.is_none(), "Roast already set.");
+        assert!(duel.turns[turn].roast_cid.is_none(), "Roast already set.");
 
-        duel.turns[turn].roast = Some(roast_tx_id);
+        duel.turns[turn].roast_cid = Some(roast_cid);
     }
 
     pub fn ft_on_transfer(

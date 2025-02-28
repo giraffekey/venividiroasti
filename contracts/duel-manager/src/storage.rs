@@ -47,7 +47,7 @@ pub struct Turn {
     pub creation_time: u64,
     pub damage: u8,
     pub style: RoastStyle,
-    pub roast: Option<String>,
+    pub roast_cid: Option<String>,
 }
 
 #[near(serializers = [json, borsh])]

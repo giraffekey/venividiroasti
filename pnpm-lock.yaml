@@ -54,9 +54,6 @@ importers:
         specifier: ^8.18.1
         version: 8.18.1(bufferutil@4.0.9)(utf-8-validate@6.0.5)
     devDependencies:
-      '@ipshipyard/node-datachannel':
-        specifier: ^0.26.4
-        version: 0.26.4
       '@types/node':
         specifier: ^20
         version: 20.17.19

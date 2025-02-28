@@ -10,9 +10,7 @@ import {
 import { create, type Client } from "@web3-storage/w3up-client";
 import OpenAI from "openai";
 import { filesFromPaths } from "files-from-path";
-import { createHelia } from "helia";
-import { unixfs } from "@helia/unixfs";
-import { CID } from "multiformats/cid";
+import axios from "axios";
 import cron from "node-cron";
 import * as dotenv from "dotenv";
 import { getFigureName } from "./figures.ts";
@@ -53,12 +51,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 
 let account: Account | null = null;
 let client: Client | null = null;
-let ipfs: any = null;
 
 const url = "https://rpc.mainnet.near.org";
 const provider = new providers.JsonRpcProvider({ url });
-
-const decoder = new TextDecoder();
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -82,12 +77,6 @@ async function connectStorage() {
   const account = await client.login(WEB3_STORAGE_EMAIL);
   const space = await client.createSpace("venividiroasti", { account });
   await client.setCurrentSpace(space.did());
-}
-
-async function connectIPFS() {
-  if (ipfs) return;
-  const helia = await createHelia();
-  ipfs = unixfs(helia);
 }
 
 async function getRoastQueue(): Promise<RoastIndex[]> {
@@ -213,7 +202,7 @@ Let the roast battle begin! ⚔️\
       damageB += turn.damage;
     }
 
-    const roast = await ipfsCat(turn.roast_cid);
+    const { data: roast } = await axios.get(`https://${cid}.ipfs.w3s.link`);
 
     let top = `📜 Turn ${i + 1}:`;
     if (i == 9) {

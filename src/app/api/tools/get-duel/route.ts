@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { providers } from "near-api-js";
-import { createHelia } from "helia";
-import { unixfs } from "@helia/unixfs";
-import { CID } from "multiformats/cid";
+import axios from "axios";
 
 export async function GET(request: Request) {
   try {
@@ -32,21 +30,13 @@ export async function GET(request: Request) {
     });
     const duel = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString());
 
-    const helia = await createHelia();
-    const fs = unixfs(helia);
-    const decoder = new TextDecoder();
-
     for (let i = 0; i < duel.turns.length; i++) {
       const cid = duel.turns[i].roast_cid;
-      let roast = "";
       if (cid) {
-        for await (const chunk of fs.cat(CID.parse(cid))) {
-          roast += decoder.decode(chunk, {
-            stream: true,
-          });
-        }
+        const { data } = await axios.get(`https://${cid}.ipfs.w3s.link`);
+        console.log(data);
+        duel.turns[i].roast = data;
       }
-      duel.turns[i].roast = roast;
       delete duel.turns[i].roast_cid;
     }
 

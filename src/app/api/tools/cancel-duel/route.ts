@@ -21,7 +21,7 @@ export async function POST(request: Request) {
             account_id: "duels.venividiroasti.near",
             methodName: "cancel_duel",
             args: {
-              duel_id: parseInt(duelId),
+              duel_id: duelId,
             },
             gas: "30000000000000",
           },

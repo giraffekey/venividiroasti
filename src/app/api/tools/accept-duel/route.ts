@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { provider, utils } from "near-api-js";
+import { providers, utils } from "near-api-js";
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +14,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const url = `https://rpc.mainnet.near.org`;
+    const provider = new providers.JsonRpcProvider({ url });
+
     const args = {
-      duel_id: parseInt(duelId),
+      duel_id: duelId,
     };
 
     const res = await provider.query({
@@ -41,12 +44,12 @@ export async function POST(request: Request) {
               memo: null,
               msg: JSON.stringify({
                 function: "accept_duel",
-                duel_id: parseInt(duelId),
+                duel_id: duelId,
                 figure,
               }),
             },
             deposit: "1",
-            gas: "30000000000000",
+            gas: "100000000000000",
           },
         },
       ],

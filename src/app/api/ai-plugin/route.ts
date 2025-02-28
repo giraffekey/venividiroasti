@@ -31,7 +31,9 @@ export async function GET() {
           Simply retrieving the payload is not enough—users must execute the transaction via the corresponding tool.
           When dealing with $ROASTI amounts, keep in mind that the token has 24 decimals.
           When inputting a figure parameter, ensure they available in the /api/tools/get-figures endpoint. Format as an enum variant with no spaces or punctuation.
+          When inputting a roast style parameter, ensure it is available in the /api/tools/get-styles endpoint. Format as an enum variant with no spaces or punctuation.
           When asked to view leaderboards, use /api/tools/get-leaderboard-by-wins and /api/tools/get-leaderboard-by-damage
+          When calling /api/tools/create-duel, the minimum stake is 1 $ROASTI (with 24 decimals).
           Large datasets should be formatted as tables for readability.
         `,
         categories: [
@@ -299,6 +301,48 @@ export async function GET() {
           },
         },
       },
+      "/api/tools/get-styles": {
+        get: {
+          operationId: "get-styles",
+          summary: "Fetch available roast styles",
+          description:
+            "Returns a list of all roast styles that can be used in duels.",
+          responses: {
+            "200": {
+              description: "Successful response with historical figures",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      styles: {
+                        type: "string",
+                        description: "The roast style classification.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid request or missing parameters.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      error: {
+                        type: "string",
+                        description: "Error message.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/api/tools/get-duel": {
         get: {
           operationId: "get-duel",
@@ -480,44 +524,6 @@ export async function GET() {
                           description:
                             "Historical figure chosen by player B (null if not accepted).",
                         },
-                        turns: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              creation_time: {
-                                type: "integer",
-                                description:
-                                  "Timestamp of when the turn was taken.",
-                              },
-                              damage: {
-                                type: "integer",
-                                minimum: 1,
-                                maximum: 15,
-                                description:
-                                  "Amount of damage dealt in this turn.",
-                              },
-                              style: {
-                                type: "string",
-                                enum: [
-                                  "Witty",
-                                  "Brutal",
-                                  "Strategic",
-                                  "Mocking",
-                                ],
-                                description:
-                                  "The style of roast attack used in the duel.",
-                              },
-                              roast: {
-                                type: "string",
-                                nullable: true,
-                                description:
-                                  "The AI-generated roast statement (null if not generated).",
-                              },
-                            },
-                          },
-                          description: "List of turns taken in the duel.",
-                        },
                         winner: {
                           type: "string",
                           nullable: true,
@@ -621,44 +627,6 @@ export async function GET() {
                           nullable: true,
                           description:
                             "Historical figure chosen by player B (null if not accepted).",
-                        },
-                        turns: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              creation_time: {
-                                type: "integer",
-                                description:
-                                  "Timestamp of when the turn was taken.",
-                              },
-                              damage: {
-                                type: "integer",
-                                minimum: 1,
-                                maximum: 15,
-                                description:
-                                  "Amount of damage dealt in this turn.",
-                              },
-                              style: {
-                                type: "string",
-                                enum: [
-                                  "Witty",
-                                  "Brutal",
-                                  "Strategic",
-                                  "Mocking",
-                                ],
-                                description:
-                                  "The style of roast attack used in the duel.",
-                              },
-                              roast: {
-                                type: "string",
-                                nullable: true,
-                                description:
-                                  "The AI-generated roast statement (null if not generated).",
-                              },
-                            },
-                          },
-                          description: "List of turns taken in the duel.",
                         },
                         winner: {
                           type: "string",
@@ -764,44 +732,6 @@ export async function GET() {
                           description:
                             "Historical figure chosen by player B (null if not accepted).",
                         },
-                        turns: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              creation_time: {
-                                type: "integer",
-                                description:
-                                  "Timestamp of when the turn was taken.",
-                              },
-                              damage: {
-                                type: "integer",
-                                minimum: 1,
-                                maximum: 15,
-                                description:
-                                  "Amount of damage dealt in this turn.",
-                              },
-                              style: {
-                                type: "string",
-                                enum: [
-                                  "Witty",
-                                  "Brutal",
-                                  "Strategic",
-                                  "Mocking",
-                                ],
-                                description:
-                                  "The style of roast attack used in the duel.",
-                              },
-                              roast: {
-                                type: "string",
-                                nullable: true,
-                                description:
-                                  "The AI-generated roast statement (null if not generated).",
-                              },
-                            },
-                          },
-                          description: "List of turns taken in the duel.",
-                        },
                         winner: {
                           type: "string",
                           nullable: true,
@@ -897,44 +827,6 @@ export async function GET() {
                           nullable: true,
                           description:
                             "Historical figure chosen by player B (null if not accepted).",
-                        },
-                        turns: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              creation_time: {
-                                type: "integer",
-                                description:
-                                  "Timestamp of when the turn was taken.",
-                              },
-                              damage: {
-                                type: "integer",
-                                minimum: 1,
-                                maximum: 15,
-                                description:
-                                  "Amount of damage dealt in this turn.",
-                              },
-                              style: {
-                                type: "string",
-                                enum: [
-                                  "Witty",
-                                  "Brutal",
-                                  "Strategic",
-                                  "Mocking",
-                                ],
-                                description:
-                                  "The style of roast attack used in the duel.",
-                              },
-                              roast: {
-                                type: "string",
-                                nullable: true,
-                                description:
-                                  "The AI-generated roast statement (null if not generated).",
-                              },
-                            },
-                          },
-                          description: "List of turns taken in the duel.",
                         },
                         winner: {
                           type: "string",

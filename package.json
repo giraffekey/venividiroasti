@@ -11,17 +11,20 @@
   },
   "dependencies": {
     "@bitteprotocol/agent-sdk": "^0.0.11",
-    "dotenv": "^16.4.7",
+    "@helia/unixfs": "^4.0.2",
+    "bufferutil": "^4.0.9",
+    "helia": "^5.2.1",
+    "multiformats": "^13.3.2",
     "near-api-js": "^5.0.1",
     "near-safe": "^0.9.4",
     "next": "14.2.15",
     "node-cron": "^3.0.3",
-    "openai": "^4.82.0",
     "react": "^18",
     "react-dom": "^18",
-    "twitter-api-v2": "^1.19.1",
+    "utf-8-validate": "^6.0.5",
     "vercel-url": "^0.2.1",
-    "viem": "^2.21.54"
+    "viem": "^2.21.54",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/node": "^20",

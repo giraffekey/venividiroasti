@@ -17,7 +17,7 @@ export async function GET() {
     });
     const figures = JSON.parse(Buffer.from(res.result).toString());
 
-    return NextResponse.json(figures);
+    return NextResponse.json({ figures });
   } catch (error) {
     console.error("Error getting figures:", error);
     return NextResponse.json(

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
             account_id: "duels.venividiroasti.near",
             methodName: "take_turn",
             args: {
-              duel_id: parseInt(duelId),
+              duel_id: duelId,
               style,
             },
             gas: "30000000000000",

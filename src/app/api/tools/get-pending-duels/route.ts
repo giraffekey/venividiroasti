@@ -24,6 +24,10 @@ export async function GET(request: Request) {
     });
     const duels = JSON.parse(Buffer.from(res.result).toString());
 
+    for (let i = 0; i < duels.length; i++) {
+      delete duels[i].turns;
+    }
+
     return NextResponse.json(duels);
   } catch (error) {
     console.error("Error calling function:", error);

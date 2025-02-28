@@ -12,7 +12,7 @@ export async function GET() {
     },
     servers: [
       {
-        url: config.url || "venividiroasti.vercel.app",
+        url: config.url || "https://venividiroasti.vercel.app",
       },
     ],
     "x-mb": {

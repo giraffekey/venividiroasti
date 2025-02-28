@@ -7,7 +7,6 @@
     "build": "next build && make-agent deploy -u https://venividiroasti.vercel.app",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "pnpm rebuild @ipshipyard/node-datachannel",
     "run:bot": "ts-node scripts/bot.ts"
   },
   "dependencies": {
@@ -28,6 +27,7 @@
     "ws": "^8.18.1"
   },
   "devDependencies": {
+    "@ipshipyard/node-datachannel": "^0.26.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { providers, utils } from "near-api-js";
+import { providers } from "near-api-js";
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "optimistic",
     });
-    const duel = JSON.parse(Buffer.from(res.result).toString());
+    const duel = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString());
     const stake = duel.stake;
 
     const transactionPayload = {

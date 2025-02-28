@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { providers, utils } from "near-api-js";
+import { providers } from "near-api-js";
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "optimistic",
     });
-    const balance = JSON.parse(Buffer.from(res.result).toString());
+    const balance = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString());
     console.log(balance);
 
     if (balance === null) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
         finality: "optimistic",
       });
-      const min = JSON.parse(Buffer.from(res.result).toString()).min;
+      const min = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString()).min;
 
       actions.push({
         type: "FunctionCall",

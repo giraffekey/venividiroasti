@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { utils } from "near-api-js";
 
 export async function POST(request: Request) {
   try {

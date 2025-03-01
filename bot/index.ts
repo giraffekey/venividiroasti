@@ -209,7 +209,9 @@ Let the roast battle begin! ⚔️\
       damageB += turn.damage;
     }
 
-    const { data: roast } = await axios.get(`https://${turn.roast_cid}.ipfs.w3s.link`);
+    const { data: roast } = await axios.get(
+      `https://${turn.roast_cid}.ipfs.w3s.link`,
+    );
 
     let top = `📜 Turn ${i + 1}:`;
     if (i == 9) {

@@ -534,7 +534,7 @@ impl DuelManagerContract {
     fn _create_duel(&mut self, sender: AccountId, figure: HistoricalFigure, stake: U128) -> U128 {
         let balance = self.stakes.entry(sender.clone()).or_insert(0);
 
-        assert!(stake >= U128(MIN_STAKE), "Minimum stake required.");
+        // assert!(stake >= U128(MIN_STAKE), "Minimum stake required.");
         assert!(*balance >= stake.0, "Insufficient balance");
 
         *balance -= stake.0;

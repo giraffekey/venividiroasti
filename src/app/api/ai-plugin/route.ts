@@ -27,6 +27,18 @@ export async function GET() {
           Users can stake $ROASTI to challenge opponents in turn-based roast duels, where historical figures exchange AI-generated insults.
           The agent also provides memecoin transaction tools and duel tracking.
         `,
+        // instructions: `
+        //   You handle $ROASTI token transactions, roast duels, and leaderboard tracking.
+        //   When processing blockchain transactions, first generate a transaction payload, then explicitly use the 'generate-transaction' tool for NEAR to complete the transaction.
+        //   Simply retrieving the payload is not enough—users must execute the transaction via the corresponding tool.
+        //   When dealing with $ROASTI amounts, keep in mind that the token has 24 decimals.
+        //   When inputting a figure parameter, ensure they available in the /api/tools/get-figures endpoint. Format as an enum variant with no spaces or punctuation.
+        //   When inputting a roast style parameter, ensure it is available in the /api/tools/get-styles endpoint. Format as an enum variant with no spaces or punctuation.
+        //   When asked to view leaderboards, use /api/tools/get-leaderboard-by-wins and /api/tools/get-leaderboard-by-damage
+        //   When calling /api/tools/create-duel, the minimum stake is 1 $ROASTI (with 24 decimals).
+        //   When calling the 'ft_transfer_call' method, ensure it is calling 'token.venividiroasti.near', NOT 'duels.venividiroasti.near'.
+        //   Large datasets should be formatted as tables for readability.
+        // `,
         instructions: `
           You handle $ROASTI token transactions, roast duels, and leaderboard tracking.
           When processing blockchain transactions, first generate a transaction payload, then explicitly use the 'generate-transaction' tool for NEAR to complete the transaction.
@@ -35,7 +47,6 @@ export async function GET() {
           When inputting a figure parameter, ensure they available in the /api/tools/get-figures endpoint. Format as an enum variant with no spaces or punctuation.
           When inputting a roast style parameter, ensure it is available in the /api/tools/get-styles endpoint. Format as an enum variant with no spaces or punctuation.
           When asked to view leaderboards, use /api/tools/get-leaderboard-by-wins and /api/tools/get-leaderboard-by-damage
-          When calling /api/tools/create-duel, the minimum stake is 1 $ROASTI (with 24 decimals).
           When calling the 'ft_transfer_call' method, ensure it is calling 'token.venividiroasti.near', NOT 'duels.venividiroasti.near'.
           Large datasets should be formatted as tables for readability.
         `,
@@ -75,7 +86,8 @@ export async function GET() {
                 type: "string",
               },
               description:
-                "The amount of $ROASTI staked for the duel (minimum 1 $ROASTI).",
+                // "The amount of $ROASTI staked for the duel (minimum 1 $ROASTI).",
+                "The amount of $ROASTI staked for the duel.",
             },
           ],
           responses: {

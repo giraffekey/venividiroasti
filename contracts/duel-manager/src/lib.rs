@@ -353,8 +353,7 @@ impl DuelManagerContract {
                 ));
 
                 self.burn(U128(fee));
-                let promise = self
-                    .transfer(player_a.clone(), U128(reward - fee));
+                let promise = self.transfer(player_a.clone(), U128(reward - fee));
 
                 self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
@@ -369,8 +368,7 @@ impl DuelManagerContract {
                 ));
 
                 self.burn(U128(fee));
-                let promise = self
-                    .transfer(player_b.clone(), U128(reward - fee));
+                let promise = self.transfer(player_b.clone(), U128(reward - fee));
 
                 self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
@@ -380,11 +378,10 @@ impl DuelManagerContract {
                 let stake = duel.stake;
                 duel.winner = Some(Winner::Draw);
                 env::log_str(&format!("Duel {} finished! Result: draw!", duel.id.0));
-                
-                self
-                    .transfer(player_a, stake);
+
+                self.transfer(player_a, stake);
                 let promise = self.transfer(player_b, stake);
-                
+
                 self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
             }
@@ -452,12 +449,10 @@ impl DuelManagerContract {
         let stake = duel.stake;
         let promise = if is_player_a_turn {
             self.transfer(player_a, stake);
-            self
-                .transfer(player_b, stake)
+            self.transfer(player_b, stake)
         } else {
             self.transfer(player_b, stake);
-            self
-                .transfer(player_a, stake)
+            self.transfer(player_a, stake)
         };
 
         self.duels.remove(&duel_id.0);

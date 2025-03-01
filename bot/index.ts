@@ -8,8 +8,9 @@ import {
   type Account,
 } from "near-api-js";
 import { create, type Client } from "@web3-storage/w3up-client";
-import OpenAI from "openai";
 import { filesFromPaths } from "files-from-path";
+import OpenAI from "openai";
+import { TwitterApi } from "twitter-api-v2";
 import axios from "axios";
 import cron from "node-cron";
 import * as dotenv from "dotenv";
@@ -55,6 +56,13 @@ const url = "https://rpc.mainnet.near.org";
 const provider = new providers.JsonRpcProvider({ url });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+const twitter = new TwitterApi({
+  appKey: process.env.TWITTER_API_KEY,
+  appSecret: process.env.TWITTER_API_SECRET,
+  accessToken: process.env.TWITTER_ACCESS_TOKEN,
+  accessSecret: process.env.TWITTER_ACCESS_SECRET,
+});
 
 async function connectNear() {
   if (account) return;
@@ -172,7 +180,7 @@ Severity of the roast: ${severity}.
   console.log(`Roast generated for duel ${index.duel_id}! "${roast}"`);
 }
 
-async function postDuelThread(duel: Duel) {
+async function createDuelThread(duel: Duel) {
   const figureA = getFigureName(duel.figure_a);
   const figureB = getFigureName(duel.figure_b);
   const stake = utils.format.formatNearAmount(duel.stake);
@@ -201,7 +209,7 @@ Let the roast battle begin! ⚔️\
       damageB += turn.damage;
     }
 
-    const { data: roast } = await axios.get(`https://${cid}.ipfs.w3s.link`);
+    const { data: roast } = await axios.get(`https://${turn.roast_cid}.ipfs.w3s.link`);
 
     let top = `📜 Turn ${i + 1}:`;
     if (i == 9) {
@@ -229,13 +237,13 @@ ${top}
   }
 
   let summary;
-  if (diff <= 30) {
+  if (diff <= 15) {
     summary = `😅 ${winnerFigure} barely made it through—both duelists walked away with their pride (mostly) intact.`;
-  } else if (diff <= 60) {
+  } else if (diff <= 30) {
     summary = `⚔️ Sharp words were thrown, but neither side fully dominated. The crowd wants a rematch.`;
-  } else if (diff <= 90) {
+  } else if (diff <= 45) {
     summary = `🔥 One duelist started losing ground fast, but they held their own until the end.`;
-  } else if (diff <= 120) {
+  } else if (diff <= 60) {
     summary = `⚡ The arena shook as ${winnerFigure}'s insults landed with precision—this one will be talked about for a while.`;
   } else {
     summary = `💀 There was no mercy. ${winnerFigure} sent their opponent straight to the history books (for the wrong reasons).`;
@@ -245,6 +253,31 @@ ${top}
 ${summary}
 🏆 ${winner} wins the roast battle and takes the pot!\
 `);
+
+  console.log(thread.join("\n-----\n"));
+
+  return thread;
+}
+
+async function postThread(thread: string[]) {
+  if (thread.length === 0) return;
+
+  try {
+    let lastTweetId: string | null = null;
+
+    for (const text of thread) {
+      const tweet = await twitter.v2.tweet({
+        text,
+        reply: lastTweetId ? { in_reply_to_tweet_id: lastTweetId } : undefined,
+      });
+
+      lastTweetId = tweet.data.id;
+    }
+
+    console.log("✅ Thread posted successfully.");
+  } catch (error) {
+    console.error("❌ Error posting thread:", error);
+  }
 }
 
 async function generateRoasts() {
@@ -260,8 +293,8 @@ async function generateRoasts() {
 async function postTopDuel() {
   const duel = await getTopDuel();
   if (duel) {
-    console.log("Top duel:", duel);
-    await postDuelThread(duel);
+    const thread = await createDuelThread(duel);
+    await postThread(thread);
   }
 }
 

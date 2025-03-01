@@ -355,6 +355,8 @@ impl DuelManagerContract {
                 self.burn(U128(fee));
                 let promise = self
                     .transfer(player_a.clone(), U128(reward - fee));
+
+                self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
             } else if damage_a < damage_b {
                 let player_b = duel.player_b.clone().unwrap();
@@ -369,6 +371,8 @@ impl DuelManagerContract {
                 self.burn(U128(fee));
                 let promise = self
                     .transfer(player_b.clone(), U128(reward - fee));
+
+                self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
             } else {
                 let player_a = duel.player_a.clone();
@@ -380,6 +384,8 @@ impl DuelManagerContract {
                 self
                     .transfer(player_a, stake);
                 let promise = self.transfer(player_b, stake);
+                
+                self.duels.insert(duel_id.0, duel);
                 return PromiseOrValue::Promise(promise);
             }
         }
@@ -588,6 +594,8 @@ impl DuelManagerContract {
     }
 
     fn burn(&mut self, amount: U128) -> Promise {
-        ext_ft_contract::ext(self.ft_contract.clone()).ft_burn(amount)
+        ext_ft_contract::ext(self.ft_contract.clone())
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .ft_burn(amount)
     }
 }

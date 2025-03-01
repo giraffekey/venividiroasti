@@ -231,12 +231,12 @@ impl DuelManagerContract {
                     .map(|(i, turn)| RoastIndex {
                         duel_id: duel.id,
                         turn: i,
-                        current_figure: if duel.turns.len() % 2 == 0 {
+                        current_figure: if i % 2 == 0 {
                             duel.figure_a.clone()
                         } else {
                             duel.figure_b.unwrap()
                         },
-                        next_figure: if duel.turns.len() % 2 == 0 {
+                        next_figure: if i % 2 == 0 {
                             duel.figure_b.unwrap()
                         } else {
                             duel.figure_a.clone()

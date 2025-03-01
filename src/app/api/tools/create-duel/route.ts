@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+const TOKEN_CONTRACT_ID = process.env.TOKEN_CONTRACT_ID!;
+const DUELS_CONTRACT_ID = process.env.DUELS_CONTRACT_ID!;
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,10 +21,10 @@ export async function POST(request: Request) {
         {
           type: "FunctionCall",
           params: {
-            account_id: "token.venividiroasti.near",
+            account_id: TOKEN_CONTRACT_ID,
             methodName: "ft_transfer_call",
             args: {
-              receiver_id: "duels.venividiroasti.near",
+              receiver_id: DUELS_CONTRACT_ID,
               amount: stake,
               memo: null,
               msg: JSON.stringify({

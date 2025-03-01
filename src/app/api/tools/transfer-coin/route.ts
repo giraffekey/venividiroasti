@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { providers } from "near-api-js";
 
+const TOKEN_CONTRACT_ID = process.env.TOKEN_CONTRACT_ID!;
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,12 +28,14 @@ export async function POST(request: Request) {
 
     const res = await provider.query({
       request_type: "call_function",
-      account_id: "token.venividiroasti.near",
+      account_id: TOKEN_CONTRACT_ID,
       method_name: "storage_balance_of",
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "optimistic",
     });
-    const balance = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString());
+    const balance = JSON.parse(
+      Buffer.from((res as unknown as { result: string }).result).toString(),
+    );
     console.log(balance);
 
     if (balance === null) {
@@ -39,17 +43,19 @@ export async function POST(request: Request) {
 
       const res = await provider.query({
         request_type: "call_function",
-        account_id: "token.venividiroasti.near",
+        account_id: TOKEN_CONTRACT_ID,
         method_name: "storage_balance_bounds",
         args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
         finality: "optimistic",
       });
-      const min = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString()).min;
+      const min = JSON.parse(
+        Buffer.from((res as unknown as { result: string }).result).toString(),
+      ).min;
 
       actions.push({
         type: "FunctionCall",
         params: {
-          account_id: "token.venividiroasti.near",
+          account_id: TOKEN_CONTRACT_ID,
           methodName: "storage_deposit",
           args: {
             account_id: receiverId,
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
     actions.push({
       type: "FunctionCall",
       params: {
-        account_id: "token.venividiroasti.near",
+        account_id: TOKEN_CONTRACT_ID,
         methodName: "ft_transfer",
         args: {
           receiver_id: receiverId,

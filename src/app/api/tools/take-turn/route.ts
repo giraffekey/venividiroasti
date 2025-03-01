@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const DUELS_CONTRACT_ID = process.env.DUELS_CONTRACT_ID!;
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,7 +20,7 @@ export async function POST(request: Request) {
         {
           type: "FunctionCall",
           params: {
-            account_id: "duels.venividiroasti.near",
+            account_id: DUELS_CONTRACT_ID,
             methodName: "take_turn",
             args: {
               duel_id: duelId,

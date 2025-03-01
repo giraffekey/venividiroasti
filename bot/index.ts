@@ -43,10 +43,9 @@ interface Duel {
 
 dotenv.config();
 
-const DUELS_CONTRACT_ID = "duels.venividiroasti.near";
-
 const NEAR_PRIVATE_KEY = process.env.NEAR_PRIVATE_KEY!;
 const WEB3_STORAGE_EMAIL = process.env.WEB3_STORAGE_EMAIL!;
+const DUELS_CONTRACT_ID = process.env.DUELS_CONTRACT_ID!;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 
 let account: Account | null = null;

@@ -20,7 +20,8 @@ export async function GET() {
       email: "venividiroasti@proton.me",
       assistant: {
         name: "Veni; Vidi; Roasti",
-        image: "https://bafybeigtal45oq7nsim7q6n2tm4ongctl64bebmwsgmz5vkqwjalryevwa.ipfs.w3s.link/venividiroasti.png",
+        image:
+          "https://bafybeigtal45oq7nsim7q6n2tm4ongctl64bebmwsgmz5vkqwjalryevwa.ipfs.w3s.link/venividiroasti.png",
         description: `
           An AI agent that facilitates $ROASTI token duels, tracks leaderboard stats, and manages roast battles between historical figures.
           Users can stake $ROASTI to challenge opponents in turn-based roast duels, where historical figures exchange AI-generated insults.

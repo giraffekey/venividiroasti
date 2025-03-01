@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const TOKEN_CONTRACT_ID = process.env.TOKEN_CONTRACT_ID!;
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
         {
           type: "FunctionCall",
           params: {
-            account_id: "token.venividiroasti.near",
+            account_id: TOKEN_CONTRACT_ID,
             methodName: "ft_burn",
             args: {
               amount,

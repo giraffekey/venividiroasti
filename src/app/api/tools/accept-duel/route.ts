@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { providers } from "near-api-js";
 
+const TOKEN_CONTRACT_ID = process.env.TOKEN_CONTRACT_ID!;
+const DUELS_CONTRACT_ID = process.env.DUELS_CONTRACT_ID!;
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,12 +26,14 @@ export async function POST(request: Request) {
 
     const res = await provider.query({
       request_type: "call_function",
-      account_id: "duels.venividiroasti.near",
+      account_id: DUELS_CONTRACT_ID,
       method_name: "get_duel",
       args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "optimistic",
     });
-    const duel = JSON.parse(Buffer.from(((res as unknown) as { result: string }).result).toString());
+    const duel = JSON.parse(
+      Buffer.from((res as unknown as { result: string }).result).toString(),
+    );
     const stake = duel.stake;
 
     const transactionPayload = {
@@ -36,10 +41,10 @@ export async function POST(request: Request) {
         {
           type: "FunctionCall",
           params: {
-            account_id: "token.venividiroasti.near",
+            account_id: TOKEN_CONTRACT_ID,
             methodName: "ft_transfer_call",
             args: {
-              receiver_id: "duels.venividiroasti.near",
+              receiver_id: DUELS_CONTRACT_ID,
               amount: stake,
               memo: null,
               msg: JSON.stringify({

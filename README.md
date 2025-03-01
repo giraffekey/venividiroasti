@@ -5,7 +5,7 @@ Veni; Vidi; Roasti is a blockchain-powered, AI-driven roast battle game where hi
 
 The **AI agent** posts daily Twitter threads summarizing completed duels, making the battles public and engaging.
 
-It can be interacted with [here](https://wallet.bitte.ai/smart-actions/?mode=debug&agentId=venividiroasti.vercel.app).
+It can be interacted with [here](https://wallet.bitte.ai/smart-actions/?mode=debug&agentId=venividiroasti.vercel.app). Follow the bot on [Twitter](https://x.com/venividiroasti).
 
 ## **Features**
 ### **Smart Contracts**

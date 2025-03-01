@@ -36,6 +36,7 @@ export async function GET() {
           When inputting a roast style parameter, ensure it is available in the /api/tools/get-styles endpoint. Format as an enum variant with no spaces or punctuation.
           When asked to view leaderboards, use /api/tools/get-leaderboard-by-wins and /api/tools/get-leaderboard-by-damage
           When calling /api/tools/create-duel, the minimum stake is 1 $ROASTI (with 24 decimals).
+          When calling the 'ft_transfer_call' method, ensure it is calling 'token.venividiroasti.near', NOT 'duels.venividiroasti.near'.
           Large datasets should be formatted as tables for readability.
         `,
         categories: [
